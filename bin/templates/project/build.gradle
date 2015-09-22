@@ -12,11 +12,12 @@ buildscript {
     }
 }
 
-ext.multiarch=false
+ext.multiarch=true
 
 dependencies {
     compile fileTree(dir: 'libs', include: '*.jar')
     for (subproject in getProjectList()) {
+        println subproject
         compile project(subproject)
     }
 }
@@ -39,7 +40,7 @@ android {
     }
 
     compileSdkVersion 19
-    buildToolsVersion "19.0.0"
+    buildToolsVersion "19.0.3"
 
     if (multiarch || System.env.BUILD_MULTIPLE_APKS) {
         productFlavors {
@@ -67,7 +68,34 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_7
         targetCompatibility JavaVersion.VERSION_1_7
     }
+    defaultConfig {
+        minSdkVersion 14
+        targetSdkVersion 19
+    }
 
+    task copyNativeLibs(type: Copy) {
+        def libPath = project(':CordovaLib:xwalk_core_library').projectDir.absolutePath + '/libs'
+        from fileTree(dir: 'libs', include: '*/*.so' )  into  'build/native-libs'
+        from fileTree(dir: libPath, include: '*/*.so' )  into  'build/native-libs'
+        for (subproject in getProjectList()) {
+            libPath = project(subproject).projectDir.absolutePath + '/libs'
+            println libPath
+            from fileTree(dir: libPath, include: '*/*.so' )  into  'build/native-libs'
+        }
+    }
+    tasks.withType(Compile) { compileTask -> compileTask.dependsOn copyNativeLibs }
+
+    clean.dependsOn 'cleanCopyNativeLibs'
+
+    tasks.withType(com.android.build.gradle.tasks.PackageApplication) { pkgTask ->
+        pkgTask.jniFolders = new HashSet()
+        pkgTask.jniFolders.add(new File(projectDir, 'build/native-libs'))
+        println pkgTask.jniFolders
+    }
+
+    dexOptions {
+    preDexLibraries = false
+}
 }
 
 task wrapper(type: Wrapper) {
@@ -91,4 +119,7 @@ def getProjectList() {
       projects.add(":" + matcher.group(2).replace("/",":"))
     }
     return projects
+}
+
+task lintVitalRelease {
 }

@@ -15,4 +15,6 @@ for (subproject in getProjectList()) {
     include subproject
 }
 
+include ':CordovaLib:xwalk_core_library'
+include ':com.anysdk:anysdk-libAnySDK'
 include ':'
